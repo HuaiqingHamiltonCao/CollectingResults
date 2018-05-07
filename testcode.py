@@ -23,7 +23,7 @@ lignum = {
 	'bva': 4, # Trigonal bipyramid with a vacancy (axial)
 	'bvp': 4, # Trigonal bipyramid with a vacancy (equatorial)
 	'pyv': 4, # Square pyramid with a vacancy (equatorial)
-	'spy'; 5, # Square pyramid
+	'spy': 5, # Square pyramid
 	'tbp': 5, # Trigonal bipyramid
 	'tpv': 5, # Trigonal prism with a vacancy
 	'oct': 6, # Octahedron
@@ -74,13 +74,13 @@ for x in line1:
 
 # Visit the subfolder which name i the same as recorded in ionname list
 
-for i in range(len(ionname)):
-	i1 = ionname[i]
-	c1 = configtype[i]
+for j in range(len(ionname)):
+	i1 = ionname[j]
+	c1 = configtype[j]
 
 # Ready to create the main dictionary
 	dicname = (i1)
-	dicthome[dicname] = {'template': dicttemplate, 'fitted': dictfitted, 'pdb':dictpdb}
+	dicthome[dicname] = {'configuration': c1, 'template': dicttemplate, 'fitted': dictfitted, 'pdb':dictpdb}
 
 
 # Results without a best geometry will be recorded as 'irr'. When coming with an 'irr' result, we just skip it.
@@ -93,36 +93,31 @@ for i in range(len(ionname)):
 		line2 = []
 		line2 = outfl.readlines()
 
-# line3 will contain the extracted coordinates of the ideal template
+# Di3 will contain the extracted coordinates of the ideal template
 # The first three lines of the fulltext will be obmitted
 # Dictionary is made to contain the coordinate
-		line3 = []
 		lnum = lignum[c1]
 		for i in range(lnum):
 			coor = line2[3+i].strip().split(' ')
 			coor = [ e for e in coor if e not in (' ') ]
 			coor = [ float(e) for e in coor ]
-			line3.append(coor)
-			di3 = dict(x=coor(0), y=coor(1), z=coor(2))
+			di3 = dict(x=coor[0], y=coor[1], z=coor[2])
 			dicttemplate.update(di3)
 
-# line4 will contain the fitted coordinates and RMSD
+# Di4 will contain the fitted coordinates and RMSD
 # The coming three lines will be obmitted also
 # Dictionary is made to contain the coordinate
-		line4 = []
 		for i in range(lnum):
-			coor2 = line2[6+lnum+i].strip().split(' ')
-			coor2 = [ e for e in coor if e not in (' ') ]
-			coor2 = [ float(e) for e in coor ]
-			line4.append(coor2)
-			di4 = dict(x=coor2(0), y=coor2(1), z=coor2(2), RMSD=coor2(3))
+			coor2 = line2[8+lnum+i].strip().split(' ')
+			coor2 = [ e for e in coor2 if e not in (' ') ]
+			coor2 = [ float(e) for e in coor2 ]
+			di4 = dict(x=coor2[0], y=coor2[1], z=coor2[2], RMSD=coor2[3])
 			dictfitted.update(di4)
 
 # tR will contain the total RMSD
-		tRlnum = 2 * ( 3 + lnum )
+		tRlnum = 2 * ( 4 + lnum )
 		coor3 = line2[tRlnum+1].strip().split(' ')
-		coor3 = re.findall("\d+\.\d+", coor3)
-		tR = float(coor3[0])
+		tR = float(coor3[-1])
 
 # Next we will read the *.pdb file to extract the ion information and ligation atoms information
 		outpdb = i1 + '/' + c1 + '.pdb'
@@ -133,13 +128,11 @@ for i in range(len(ionname)):
 		line5 = opfl.readlines()
 
 # Only the second part is useful. It contains the coordination of ion and ligation atoms.
-# line5a will contain the coordination and the important information will extracted in to dictionary
-		label = -1 - lignum[i1]
-		line5a = []
+# Di5a will contain the coordination and the important information will extracted in to dictionary
+		label = -1 - lignum[c1]
 		for i in range(label,-1):
 			l5 = line5[i].strip().split(' ')
 			l5 = [ x for x in l5 if x not in (' ')]
-			line5a.append(l5)
 			di5a = dict(AtomNumber=int(l5[1]), AtomeType=l5[2], ResType=l5[3], ChainID=l5[4], ResNumber=int(l5[5]))
 			dictpdb.update(di5a)
 		
@@ -155,4 +148,7 @@ for i in range(len(ionname)):
 
 
 # Test the program
-	print dicthome
+#	print j
+#	print '\n'
+#	print dicthome
+#	print '\n'
