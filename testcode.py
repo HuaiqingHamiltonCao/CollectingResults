@@ -58,9 +58,8 @@ configtype = []
 
 # Prepare to save the information into dictionaries
 dicthome = {}
-dicttemplate = {}
-dictfitted = {}
-dictpdb = {}
+dictconf = {}
+dictatoms = {}
 
 # Read the FindGeo.summary file
 for x in line1:
@@ -80,44 +79,16 @@ for j in range(len(ionname)):
 
 # Ready to create the main dictionary
 	dicname = (i1)
-	dicthome[dicname] = {'configuration': c1, 'template': dicttemplate, 'fitted': dictfitted, 'pdb':dictpdb}
+	dicthome[dicname] = {'configuration': c1, 'atoms': dictatoms}
+# What will be contained in dictatoms:
+#     AtomNumber, AtomType, ResType, ChainID, ResNumber: From dictpdb
+#     x, y, z, RMSD: From dictfitted
 
 
 # Results without a best geometry will be recorded as 'irr'. When coming with an 'irr' result, we just skip it.
 	if c1 not in ('irr'):
 		outpath = i1 + '/' + c1 + '.out'
 		outfl = open(outpath, "r")
-		dict_name = i1 + '_' + c1
-
-# line2 contains the fulltext of target configuration output file. Next the coordinates of template with ideal geometry and coordinates of the fitted metal site will be extracted.
-		line2 = []
-		line2 = outfl.readlines()
-
-# Di3 will contain the extracted coordinates of the ideal template
-# The first three lines of the fulltext will be obmitted
-# Dictionary is made to contain the coordinate
-		lnum = lignum[c1]
-		for i in range(lnum):
-			coor = line2[3+i].strip().split(' ')
-			coor = [ e for e in coor if e not in (' ') ]
-			coor = [ float(e) for e in coor ]
-			di3 = dict(x=coor[0], y=coor[1], z=coor[2])
-			dicttemplate.update(di3)
-
-# Di4 will contain the fitted coordinates and RMSD
-# The coming three lines will be obmitted also
-# Dictionary is made to contain the coordinate
-		for i in range(lnum):
-			coor2 = line2[8+lnum+i].strip().split(' ')
-			coor2 = [ e for e in coor2 if e not in (' ') ]
-			coor2 = [ float(e) for e in coor2 ]
-			di4 = dict(x=coor2[0], y=coor2[1], z=coor2[2], RMSD=coor2[3])
-			dictfitted.update(di4)
-
-# tR will contain the total RMSD
-		tRlnum = 2 * ( 4 + lnum )
-		coor3 = line2[tRlnum+1].strip().split(' ')
-		tR = float(coor3[-1])
 
 # Next we will read the *.pdb file to extract the ion information and ligation atoms information
 		outpdb = i1 + '/' + c1 + '.pdb'
@@ -129,13 +100,45 @@ for j in range(len(ionname)):
 
 # Only the second part is useful. It contains the coordination of ion and ligation atoms.
 # Di5a will contain the coordination and the important information will extracted in to dictionary
-		label = -1 - lignum[c1]
-		for i in range(label,-1):
-			l5 = line5[i].strip().split(' ')
+# line2 contains the fulltext of target configuration output file. Next the coordinates of template with ideal geometry and coordinates of the fitted metal site will be extracted.
+
+# Di3 will contain the extracted coordinates of the ideal template
+# The first three lines of the fulltext will be obmitted
+# Dictionary is made to contain the coordinate
+
+# Di4 will contain the fitted coordinates and RMSD
+# The coming three lines will be obmitted also
+# Dictionary is made to contain the coordinate
+		lnum = lignum[c1]
+		label = -1 - lnum
+		line2 = []
+		line2 = outfl.readlines()
+
+		for i in range(lnum):
+			k = i + label
+			l5 = line5[k].strip().split(' ')
 			l5 = [ x for x in l5 if x not in (' ')]
 			di5a = dict(AtomNumber=int(l5[1]), AtomeType=l5[2], ResType=l5[3], ChainID=l5[4], ResNumber=int(l5[5]))
-			dictpdb.update(di5a)
+			name5a = ( l5[2] + '_' + l5[1] )
 		
+			coor = line2[3+i].strip().split(' ')
+			coor = [ e for e in coor if e not in (' ') ]
+			coor = [ float(e) for e in coor ]
+			di3 = dict(x=coor[0], y=coor[1], z=coor[2])
+
+			coor2 = line2[8+lnum+i].strip().split(' ')
+			coor2 = [ e for e in coor2 if e not in (' ') ]
+			coor2 = [ float(e) for e in coor2 ]
+			di4 = dict(x=coor2[0], y=coor2[1], z=coor2[2], RMSD=coor2[3])
+
+			dictatoms[name5a] = di5a
+			dictatoms[name5a].update(di4)
+
+# tR will contain the total RMSD
+		tRlnum = 2 * ( 4 + lnum )
+		coor3 = line2[tRlnum+1].strip().split(' ')
+		tR = float(coor3[-1])
+		dicthome[dicname].update({'totalRMSD': tR})
 
 
 # If the 'irr' is read, it means that no regular configuration is found.
@@ -148,7 +151,4 @@ for j in range(len(ionname)):
 
 
 # Test the program
-#	print j
-#	print '\n'
-#	print dicthome
-#	print '\n'
+# print dicthome.items()
