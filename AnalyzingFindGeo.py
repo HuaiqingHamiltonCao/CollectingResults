@@ -4,6 +4,8 @@ import os
 import sys
 import re
 
+from math import *
+
 # Define a dictionary including the configuration types and their ligation numbers
 
 lignum = {
@@ -54,7 +56,7 @@ dictatoms = {}
 
 # Read the subfolder list in each metalic ion's folder
 # Folder name will be changed if another ion will be tested
-folderlist = "/media/caohq/DATA/Work/PDB/metalic_ion_ligand/FE2/resultfolder.txt"
+folderlist = "/media/caohq/DATA/Work/PDB/testcodeforcollectingresult/resultfolder.txt"
 fd1 = open(folderlist, "r")
 line0 = fd1.readlines()
 line0 = [x.strip() for x in line0]
@@ -141,6 +143,9 @@ for x in line0:
 			line2 = []
 			line2 = outfl.readlines()
 
+# Initiate the variant for calculating the average distance
+			averdis = 0.0
+
 			for i in range(lnum):
 				k = i + label
 # Formatted string decomposition is required
@@ -148,7 +153,8 @@ for x in line0:
 #				l5 = [ x for x in l5 if x not in (' ')]
 
 # The atom number is taken from the 5th to 11th letter of the line: 
-				an1 = int(line5[k][5:11])
+				ant1 = line5[k][5:11].strip()
+				an1 = int(ant1)
 # The atom type is taken from the 12th to 16th letter of the line:
 				at1 = line5[k][11:16].strip()
 # The residue type is taken from the 17th to 20th letter of the line:
@@ -158,13 +164,21 @@ for x in line0:
 # The residue number is taken from the 23rd to 26th letter of the line:
 				rn1 = int(line5[k][22:26])
 
-				di5a = dict(AtomNumber=an1, AtomeType=at1, ResType=rt1, ChainID=cid1, ResNumber=rn1)
-				name5a = ( rt1 + '_' + at1 )
+				di5a = dict(AtomNumber=an1, AtomType=at1, ResType=rt1, ChainID=cid1, ResNumber=rn1)
+				name5a = ( rt1 + '_' + ant1 )
 		
 				coor = line2[3+i].strip().split(' ')
 				coor = [ e for e in coor if e not in (' ') ]
 				coor = [ float(e) for e in coor ]
-				di3 = dict(x=coor[0], y=coor[1], z=coor[2])
+
+# Calculate the average distance between ion and ligation atoms
+				if i == 0:
+					x0 = coor[0]
+					y0 = coor[1]
+					z0 = coor[2]
+				else:
+					aver1 = pow(coor[0]-x0, 2) + pow(coor[1]-y0, 2) + pow(coor[2]-z0, 2)
+					averdis += sqrt(aver1)
 
 				coor2 = line2[8+lnum+i].strip().split(' ')
 				coor2 = [ e for e in coor2 if e not in (' ') ]
@@ -180,6 +194,10 @@ for x in line0:
 			tR = float(coor3[-1])
 			dicthome[dicname].update({'totalRMSD': tR})
 
+# Update dictionary with the average distance
+			averdis /= lnum
+			dicthome[dicname].update({'averageDistance': averdis})
+
 # Test the program
 			print name5a
 			print dictatoms[name5a]
@@ -188,11 +206,97 @@ for x in line0:
 # If the 'irr' is read, it means that no regular configuration is found.
 		else:
 # Something to be done with the skipped results
-			print "skipped"
-
-# All data in configtype.out has been recorded in line3 and line4. 
-	
+			print "No regular configuration. Skipped"
 
 
 # Test the program
-print dicthome.items()
+# print dicthome
+
+
+# After the data has been completely recorded in the main dictionary 'dicthome', following analysis will come.
+# Frequencies of residues for all the ions will be calculated.
+FreqRes = {}
+for key in dicthome:
+	for k1 in dicthome[key]['atoms']:
+		dd1 = dicthome[key]['atoms'][k1]
+		res1 = dd1['ResType']
+		if res1 not in FreqRes:
+			FreqRes[res1] = 1
+		else:
+			FreqRes[res1] += 1
+
+rfq = open("ResidueFrequency.txt", "w")
+print >> rfq, FreqRes
+
+
+# Frequencies of configurations will be calculated.
+FreqCog = {}
+for key in dicthome:
+	cfg1 = dicthome[key]['configuration']
+	if cfg1 not in FreqCog:
+		FreqCog[cfg1] = 1
+	else:
+		FreqCog[cfg1] += 1
+
+cfq = open("ConfigurationFrequency.txt", "w")
+print >> cfq, FreqCog
+
+
+# For one ion, the ligation residues will be analyzed.
+IonWithRes = {}
+for key in dicthome:
+	ion1 = key[:2].strip()
+	if ion1 not in IonWithRes:
+		IonWithRes[ion1] = {}
+	for k1 in dicthome[key]['atoms']:
+		de1 = dicthome[key]['atoms'][k1]
+		res1 = de1['ResType']
+		if res1 not in IonWithRes[ion1]:
+			IonWithRes[ion1][res1] = 1
+		else:
+			IonWithRes[ion1][res1] += 1
+
+iwr = open("Ion-ResidueFrequency.txt", "w")
+for key in IonWithRes:
+	print >> iwr, key
+	print >> iwr, IonWithRes[key]	
+
+
+# For one ion, the ligation atoms will be analyzed.
+IonWithAtom = {}
+for key in dicthome:
+	ion1 = key[:2].strip()
+	if ion1 not in IonWithAtom:
+		IonWithAtom[ion1] = {}
+	for k1 in dicthome[key]['atoms']:
+		de1 = dicthome[key]['atoms'][k1]
+		res1 = de1['AtomType']
+		if res1 not in IonWithAtom[ion1]:
+			IonWithAtom[ion1][res1] = 1
+		else:
+			IonWithAtom[ion1][res1] += 1
+
+iar = open("AtomFrequency.txt", "w")
+for key in IonWithAtom:
+	print >> iar, key
+	print >> iar, IonWithAtom[key]	
+
+
+# For one ion, the average distance between it and ligation atoms will be calculated.
+IonDis = {}
+for key in dicthome:
+	adis = dicthome[key]['averageDistance']
+	ion2 = key[:2].strip()
+	if ion2 not in IonDis:
+		IonDis[ion2] = {"counter": 0, "averDis": 0.0}
+	else:
+		IonDis[ion2]["counter"] += 1
+		IonDis[ion2]["averDis"] += adis
+
+for key in IonDis:
+	IonDis[key]["averDis"] /= IonDis[key]["counter"]
+
+ids = open("Distance.txt", "w")
+for key in IonDis:
+	print >> ids, key
+	print >> ids, IonDis[key]
