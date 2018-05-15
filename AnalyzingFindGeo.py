@@ -1,5 +1,5 @@
 # This code is for collecting metalic ligation results from Findgeo.py
-
+from __future__ import division
 import os
 import sys
 import re
@@ -50,13 +50,11 @@ lignum = {
 
 # Prepare to save the information into dictionaries
 dicthome = {}
-dictconf = {}
-dictatoms = {}
 
 
 # Read the subfolder list in each metalic ion's folder
 # Folder name will be changed if another ion will be tested
-folderlist = "/media/caohq/DATA/Work/PDB/testcodeforcollectingresult/resultfolder.txt"
+folderlist = "/media/caohq/DATA/Work/PDB/metalic_ion_ligand/FE/testfolder.txt"
 fd1 = open(folderlist, "r")
 line0 = fd1.readlines()
 line0 = [x.strip() for x in line0]
@@ -94,6 +92,7 @@ for x in line0:
 		y = a.split(' ')
 		ionname.append(y[0][:-1])
 		configtype.append(y[1])
+		print "%s, %s, %s" % ("   ", y[0][:-1], y[1])
 
 # Visit the subfolder which name i the same as recorded in ionname list
 
@@ -101,11 +100,11 @@ for x in line0:
 		i1 = ionname[j]
 		c1 = configtype[j]
 # Test the program
-		print i1
+#		print "%s, %s, %s" % ("        ", i1, c1)
 
 # Ready to create the main dictionary
 		dicname = (i1)
-		dicthome[dicname] = {'configuration': c1, 'atoms': dictatoms}
+		dicthome[dicname] = {'pdbid': element, 'filename': 'None', 'averageDistance': 0.0, 'totalRMSD': 0.0, 'configuration': c1, 'atoms': {}}
 # What will be contained in dictatoms:
 #     AtomNumber, AtomType, ResType, ChainID, ResNumber: From dictpdb
 #     x, y, z, RMSD: From dictfitted
@@ -116,6 +115,7 @@ for x in line0:
 			outpath = element + '/' + i1 + '/' + c1 + '.out'
 # Test the program
 #			print outpath
+			dicthome[dicname]['filename'] = outpath
 			outfl = open(outpath, "r")
 
 
@@ -146,8 +146,15 @@ for x in line0:
 # Initiate the variant for calculating the average distance
 			averdis = 0.0
 
-			for i in range(lnum):
+# Test the program
+#			print "%s, %d" % ("lnum =", lnum)
+
+			for i in range(lnum+1):
 				k = i + label
+
+# Test the program
+#				print "%d, %d" % (i, k)
+
 # Formatted string decomposition is required
 #				l5 = line5[k].strip().split(' ')
 #				l5 = [ x for x in l5 if x not in (' ')]
@@ -164,8 +171,14 @@ for x in line0:
 # The residue number is taken from the 23rd to 26th letter of the line:
 				rn1 = int(line5[k][22:26])
 
+# Test the program
+#				print "%s, %d, %s, %s, %s, %d" % ("****", an1, at1, rt1, cid1, rn1)
+
 				di5a = dict(AtomNumber=an1, AtomType=at1, ResType=rt1, ChainID=cid1, ResNumber=rn1)
 				name5a = ( rt1 + '_' + ant1 )
+
+# Test the program
+#				print "%s, %s" % ("****", name5a)
 		
 				coor = line2[3+i].strip().split(' ')
 				coor = [ e for e in coor if e not in (' ') ]
@@ -177,30 +190,38 @@ for x in line0:
 					y0 = coor[1]
 					z0 = coor[2]
 				else:
-					aver1 = pow(coor[0]-x0, 2) + pow(coor[1]-y0, 2) + pow(coor[2]-z0, 2)
+					x1 = float(coor[0] - x0)
+					y1 = float(coor[1] - y0)
+					z1 = float(coor[2] - z0)
+					aver1 = x1**2 + y1**2 + z1**2
 					averdis += sqrt(aver1)
+					print "%d, %d, %d" % (x1, y1, z1)
+					print "%d, %d" % (aver1, averdis)
 
-				coor2 = line2[8+lnum+i].strip().split(' ')
+				coor2 = line2[7+lnum+i].strip().split(' ')
 				coor2 = [ e for e in coor2 if e not in (' ') ]
 				coor2 = [ float(e) for e in coor2 ]
 				di4 = dict(x=coor2[0], y=coor2[1], z=coor2[2], RMSD=coor2[3])
 
-				dictatoms[name5a] = di5a
-				dictatoms[name5a].update(di4)
+				dicthome[dicname]['atoms'][name5a] = di5a
+				dicthome[dicname]['atoms'][name5a].update(di4)
 
 # tR will contain the total RMSD
 			tRlnum = 2 * ( 4 + lnum )
 			coor3 = line2[tRlnum+1].strip().split(' ')
 			tR = float(coor3[-1])
-			dicthome[dicname].update({'totalRMSD': tR})
+			dicthome[dicname]['totalRMSD'] = tR
 
 # Update dictionary with the average distance
-			averdis /= lnum
-			dicthome[dicname].update({'averageDistance': averdis})
+			print "%d, %d" % (averdis, lnum)
+			averdis /= float(lnum)
+			dicthome[dicname]['averageDistance'] = averdis
+			print "%d, %d" % (averdis, lnum)
 
 # Test the program
-			print name5a
-			print dictatoms[name5a]
+#			print name5a
+#			print dictatoms[name5a]
+#			print dicthome[dicname]['averageDistance']
 
 
 # If the 'irr' is read, it means that no regular configuration is found.
@@ -224,9 +245,12 @@ for key in dicthome:
 			FreqRes[res1] = 1
 		else:
 			FreqRes[res1] += 1
+#		print "%s, %s, %s, %s, %d, %d" % (key, dicthome[key]['filename'], dicthome[key]['pdbid'], res1, FreqRes[res1], dd1['AtomNumber'])
 
 rfq = open("ResidueFrequency.txt", "w")
-print >> rfq, FreqRes
+for key in FreqRes:
+	printline = key + " : " + str(FreqRes[key]) + "\n"
+	rfq.write(printline)
 
 
 # Frequencies of configurations will be calculated.
@@ -237,9 +261,12 @@ for key in dicthome:
 		FreqCog[cfg1] = 1
 	else:
 		FreqCog[cfg1] += 1
+#	print "%s, %s, %d" % (key, cfg1, FreqRes[cfg1])
 
 cfq = open("ConfigurationFrequency.txt", "w")
-print >> cfq, FreqCog
+for key in FreqCog:
+	printline = key + " : " + str(FreqCog[key]) + "\n"
+	cfq.write(printline)
 
 
 # For one ion, the ligation residues will be analyzed.
@@ -258,8 +285,12 @@ for key in dicthome:
 
 iwr = open("Ion-ResidueFrequency.txt", "w")
 for key in IonWithRes:
-	print >> iwr, key
-	print >> iwr, IonWithRes[key]	
+	printkey = key + "\n"
+	iwr.write(printkey)
+	for k1 in IonWithRes[key]:
+		printline = k1 + " : " + str(IonWithRes[key][k1]) + "\n"
+		iwr.write(printline)
+	iwr.write("\n")
 
 
 # For one ion, the ligation atoms will be analyzed.
@@ -278,25 +309,30 @@ for key in dicthome:
 
 iar = open("AtomFrequency.txt", "w")
 for key in IonWithAtom:
-	print >> iar, key
-	print >> iar, IonWithAtom[key]	
+	printkey = key + "\n"
+	iar.write(printkey)
+	for k1 in IonWithAtom[key]:
+		printline = k1 + " : " + str(IonWithAtom[key][k1]) + "\n"
+		iar.write(printline)
+	iar.write("\n")
 
 
 # For one ion, the average distance between it and ligation atoms will be calculated.
-IonDis = {}
-for key in dicthome:
-	adis = dicthome[key]['averageDistance']
-	ion2 = key[:2].strip()
-	if ion2 not in IonDis:
-		IonDis[ion2] = {"counter": 0, "averDis": 0.0}
-	else:
-		IonDis[ion2]["counter"] += 1
-		IonDis[ion2]["averDis"] += adis
+# IonDis = {}
+# ids = open("Distance.txt", "w")
+# for key in dicthome:
+#	adis = dicthome[key]['averageDistance']
+#	ion2 = key[:2].strip()
+#	if ion2 not in IonDis:
+#		IonDis[ion2] = {"counter": 0.0, "averDis": 0.0}
+#	else:
+#		IonDis[ion2]["counter"] += 1
+#		IonDis[ion2]["averDis"] += adis
+#	print >> ids, "%s, %s, %d, %d" % (key, ion2, IonDis[ion2]["counter"], IonDis[ion2]["averDis"])
 
-for key in IonDis:
-	IonDis[key]["averDis"] /= IonDis[key]["counter"]
-
-ids = open("Distance.txt", "w")
-for key in IonDis:
-	print >> ids, key
-	print >> ids, IonDis[key]
+# for key in IonDis:
+#	if IonDis[key]["counter"] != 0:
+#		IonDis[key]["averDis"] /= IonDis[key]["counter"]
+#	else:
+#		IonDis[key]["averDis"] = -1
+#	print >> ids, "%s, %d, %d" % (key, IonDis[key]["counter"], IonDis[key]["averDis"])
