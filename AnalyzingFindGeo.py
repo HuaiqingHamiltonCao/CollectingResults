@@ -195,8 +195,8 @@ for x in line0:
 					z1 = float(coor[2] - z0)
 					aver1 = x1**2 + y1**2 + z1**2
 					averdis += sqrt(aver1)
-					print "%d, %d, %d" % (x1, y1, z1)
-					print "%d, %d" % (aver1, averdis)
+#					print "%d, %d, %d" % (x1, y1, z1)
+#					print "%d, %d" % (aver1, averdis)
 
 				coor2 = line2[7+lnum+i].strip().split(' ')
 				coor2 = [ e for e in coor2 if e not in (' ') ]
@@ -213,10 +213,10 @@ for x in line0:
 			dicthome[dicname]['totalRMSD'] = tR
 
 # Update dictionary with the average distance
-			print "%d, %d" % (averdis, lnum)
+#			print "%d, %d" % (averdis, lnum)
 			averdis /= float(lnum)
 			dicthome[dicname]['averageDistance'] = averdis
-			print "%d, %d" % (averdis, lnum)
+#			print "%d, %d" % (averdis, lnum)
 
 # Test the program
 #			print name5a
